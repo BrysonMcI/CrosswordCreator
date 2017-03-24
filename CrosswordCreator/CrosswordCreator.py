@@ -42,8 +42,11 @@ Uses python re to check dictionary for occurences of word
 """
 def regex(exp):
     with open(wordDictionary) as words:
-        filetext = words.read()
-        matches = re.findall(exp ,filetext, re.IGNORECASE)
+        filetext = words.read().replace('\n', ' ')
+        starter = "\\b[^ ]{" + str(len(exp)) + "}\\b"
+        matches = re.findall(starter, filetext, re.IGNORECASE)
+        matches = ' '.join(matches)
+        matches = re.findall( "\\b" + exp + "\\b", matches, re.IGNORECASE)
         #Clean out any with punctuation
         for el in matches:
             if any(char in punctuation for char in el):
@@ -95,7 +98,7 @@ def fillWord(grid):
                 exp+=grid[x][y]
                 x+=1
             matches = regex(exp)
-            if (len(matches) == 0):
+            if (len(matches) == 0 and exp != ''):
                 return False
             if "." in exp:
                 if (lowestCount == None):
@@ -116,7 +119,7 @@ def fillWord(grid):
                 exp+=grid[x][y]
                 y+=1
             matches = regex(exp)
-            if (len(matches) == 0):
+            if (len(matches) == 0 and exp != ''):
                 return False
             if '.' in exp:
                 if (lowestCount == None):
@@ -136,7 +139,7 @@ def fillWord(grid):
             exp+=grid[x][y]
             y+=1
         matches = regex(exp)
-        if (len(matches) == 0):
+        if (len(matches) == 0 and exp != ''):
             return False
         if '.' in exp:
             if (lowestCount == None):
@@ -152,12 +155,13 @@ def fillWord(grid):
             exp+=grid[x][y]
             x+=1
         matches = regex(exp)
-        if (len(matches) == 0):
+        if (len(matches) == 0 and exp != ''):
             return False
-        elif (lowestCount == None):
-            lowestCount = (element[0]+1, y, matches, 0)
-        elif (len(matches) < len(lowestCount[2])):
-            lowestCount = (element[0]+1, y, matches, 0)
+        if '.' in exp:
+            if (lowestCount == None):
+                lowestCount = (element[0]+1, y, matches, 0)
+            elif (len(matches) < len(lowestCount[2])):
+                lowestCount = (element[0]+1, y, matches, 0)
 
     """
     Check if done
@@ -178,8 +182,6 @@ def fillWord(grid):
             for i in range(len(word)):
                 grid[x][y+i] = word[i]
 
-
-
         result = fillWord(grid)
         if result is not False:
             return result
@@ -191,6 +193,15 @@ def fillWord(grid):
 grid = fillWord(grid)
 if grid is False:
     print("No Possible Configurations")
+    print("")
 else:
     print("\nCompleted Configuration")
     printGrid(grid)
+    print
+    #And Write the grid to a new file because why not
+    with open('finishedCrossword.txt', 'w') as output:
+        output.write(str(rows) + " " + str(cols) + "\n")
+        for x in range(rows):
+            for y in range(cols):
+                output.write(grid[x][y])
+            output.write('\n')
