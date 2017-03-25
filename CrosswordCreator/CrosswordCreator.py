@@ -15,6 +15,7 @@ initState = "crossword.txt"
 rows = 0
 cols = 0
 blackSquares = []
+uncompletedWords = []
 
 punctuation = set(string.punctuation)
 
@@ -79,9 +80,9 @@ print("Provided State")
 printGrid(grid)
 
 """
-Primary recursive search function using least values remaining.
+Set up all the words.
 """
-def fillWord(grid):
+def prepGrid(grid):
 
     """
     Now Scan The Grid, looking for the row or col with least amount of words avail
@@ -101,10 +102,7 @@ def fillWord(grid):
             if (len(matches) == 0 and exp != ''):
                 return False
             if "." in exp:
-                if (lowestCount == None):
-                    lowestCount = (0, y, matches, 0)
-                elif (len(matches) < len(lowestCount[2])):
-                    lowestCount = (0, y, matches, 0)
+                uncompletedWords.append((0, y, matches, 0))
             
     """
     Scan the left side
@@ -122,11 +120,8 @@ def fillWord(grid):
             if (len(matches) == 0 and exp != ''):
                 return False
             if '.' in exp:
-                if (lowestCount == None):
-                    lowestCount = (x, 0, matches, 1)
-                elif (len(matches) < len(lowestCount[2])):
-                    lowestCount = (x, 0, matches, 1)
-    
+                uncompletedWords.append((x, 0, matches, 1))
+
     """
     Scan the black squares
     """
@@ -142,10 +137,7 @@ def fillWord(grid):
         if (len(matches) == 0 and exp != ''):
             return False
         if '.' in exp:
-            if (lowestCount == None):
-                lowestCount = (x, element[1]+1, matches, 1)
-            elif (len(matches) < len(lowestCount[2])):
-                lowestCount = (x, element[1]+1, matches, 1)
+            uncompletedWords.append((x, element[1]+1, matches, 1))
 
         #check down
         exp = ""
@@ -158,50 +150,112 @@ def fillWord(grid):
         if (len(matches) == 0 and exp != ''):
             return False
         if '.' in exp:
-            if (lowestCount == None):
-                lowestCount = (element[0]+1, y, matches, 0)
-            elif (len(matches) < len(lowestCount[2])):
-                lowestCount = (element[0]+1, y, matches, 0)
+            uncompletedWords.append((element[0]+1, y, matches, 0))
 
-    """
-    Check if done
-    """
-    if (isDone(grid)):
+"""
+Solve the grid.
+"""
+def solveGrid(grid):
+    #Check if done
+    if isDone:
         return grid
-
-    while (len(lowestCount[2]) != 0):
-        wordIdx = random.randint(0, len(lowestCount[2])-1)
-        word = lowestCount[2][wordIdx]
+    #Resort uncompleted words
+    uncompletedWords.sort(key=lambda tup: len(tup[2]))
+    #Check if lowest match size is 0 and there is no hope
+    if(len(uncompletedWords[0][2]) == 0):
+        return False
+    while uncompletedWords[0][2]:
+        #Put word, update wordsToUpdate
+        wordsToUpdate = []
+        wordIdx = random.randint(0, len(uncompletedWords[0][2])-1)
+        word = uncompletedWords[0][2][wordIdx]
         #Put word in grid (0 is down, 1 is right)
-        x = lowestCount[0]
-        y = lowestCount[1]
-        if (lowestCount[3] == 0):
+        x = uncompletedWords[0][0]
+        y = uncompletedWords[0][1]
+        #Down
+        if (uncompletedWords[0][3] == 0):
             for i in range(len(word)):
                 grid[x+i][y] = word[i]
+                #Each square will have a word to its left
+                tempY = y-1
+                while tempY >= 0 and grid[x+i][tempY] != '&':
+                    if grid[x+i][tempY-1] == '&':
+                        item = next(i for i in uncompletedWords if i[0] is x+i and i[1] is tempY)
+                        wordsToUpdate.append(item)
+                        uncompletedWords.remove(item)
         else:
             for i in range(len(word)):
                 grid[x][y+i] = word[i]
+                tempX = x-1
+                while tempX >= 0 and grid[tempX][y+i] != '&':
+                    if grid[tempX-1][y+i] == '&':
+                        item = next(i for i in uncompletedWords if i[0] is tempX and i[1] is y+i)
+                        wordsToUpdate.append(item)
+                        uncompletedWords.remove(item)
+        
+        #Update words that got affected
+        updateFine = True
+        for element in blackSquares:
+            if element[3] == 1:
+                #check to the right
+                exp = ""
+                x = element[0]
+                y = element[1]+1
+                while (y < cols and grid[x][y] != '&'):
+                    exp+=grid[x][y]
+                    y+=1
+                matches = regex(exp)
+                if (len(matches) == 0 and exp != ''):
+                    updateFine = False
+                    break
+                if '.' in exp:
+                    uncompletedWords.append((x, element[1]+1, matches, 1))
+            else:
+                #check down
+                exp = ""
+                x = element[0]+1
+                y = element[1]
+                while (x < rows and grid[x][y] != '&'):
+                    exp+=grid[x][y]
+                    x+=1
+                matches = regex(exp)
+                if (len(matches) == 0 and exp != ''):
+                    updateFine = False
+                    break
+                if '.' in exp:
+                    uncompletedWords.append((element[0]+1, y, matches, 0))
 
-        result = fillWord(grid)
-        if result is not False:
-            return result
-        del lowestCount[2][wordIdx]
+        #Including the orginial
+        saveCur = uncompletedWords[0][2]
+        del uncompletedWords[0][2]
+        if updateFine:
+            result = fillWord(grid)
+            if result is not False:
+                return result
+
+        uncompletedWords.insert(0, saveCur)
+        del uncompletedWords[0][2][wordIdx]
+        
     
     return False
 
-
-grid = fillWord(grid)
-if grid is False:
-    print("No Possible Configurations")
+prepFail = prepGrid(grid)
+if prepFail is False:
+    print("Bad starting configuration")
     print("")
 else:
-    print("\nCompleted Configuration")
-    printGrid(grid)
-    print
-    #And Write the grid to a new file because why not
-    with open('finishedCrossword.txt', 'w') as output:
-        output.write(str(rows) + " " + str(cols) + "\n")
-        for x in range(rows):
-            for y in range(cols):
-                output.write(grid[x][y])
-            output.write('\n')
+    grid = solveGrid(grid)
+    if grid is False:
+        print("No possible configurations")
+        print("")
+    else:
+        print("\nCompleted Configuration")
+        printGrid(grid)
+        print
+        #And Write the grid to a new file because why not
+        with open('finishedCrossword.txt', 'w') as output:
+            output.write(str(rows) + " " + str(cols) + "\n")
+            for x in range(rows):
+                for y in range(cols):
+                    output.write(grid[x][y])
+                output.write('\n')
