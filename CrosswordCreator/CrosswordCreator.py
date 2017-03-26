@@ -50,10 +50,12 @@ def regex(exp):
         matches = ' '.join(matches)
         matches = re.findall( "\\b" + exp + "\\b", matches, re.IGNORECASE)
         #Clean out any with punctuation
-        for x in range(0,len(matches)-1):
-            if any(char in punctuation for char in matches[x]):
-                del matches[x]
-                x-=1
+        if (len(matches) > 0):
+            x = 0
+            while x < len(matches)-1:
+                if any(char in punctuation for char in matches[x]):
+                    del matches[x]
+                    x-=1
         return matches
 
 """
