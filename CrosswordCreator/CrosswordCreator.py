@@ -18,6 +18,7 @@ blackSquares = []
 uncompletedWords = []
 
 punctuation = set(string.punctuation)
+punctuation.add("'")
 
 """
 Prints the provided grid
@@ -49,9 +50,10 @@ def regex(exp):
         matches = ' '.join(matches)
         matches = re.findall( "\\b" + exp + "\\b", matches, re.IGNORECASE)
         #Clean out any with punctuation
-        for el in matches:
-            if any(char in punctuation for char in el):
-                del el
+        for x in range(0,len(matches)-1):
+            if any(char in punctuation for char in matches[x]):
+                del matches[x]
+                x-=1
         return matches
 
 """
@@ -72,8 +74,7 @@ with open(initState) as f:
         line = list(line)
         for y in range(cols):
             if (line[y] == '&'):
-                if (x != 0 and y != 0):
-                    blackSquares.append((x,y))
+                blackSquares.append((x,y))
             grid[x][y] = line[y]
 
 print("Provided State")
@@ -152,18 +153,24 @@ def prepGrid(grid):
         if '.' in exp:
             uncompletedWords.append((element[0]+1, y, matches, 0))
 
+
 """
 Solve the grid.
 """
 def solveGrid(grid):
     #Check if done
-    if isDone:
+    if isDone(grid):
         return grid
     #Resort uncompleted words
     uncompletedWords.sort(key=lambda tup: len(tup[2]))
     #Check if lowest match size is 0 and there is no hope
     if(len(uncompletedWords[0][2]) == 0):
         return False
+    
+    #Including the orginial
+    saveCur = uncompletedWords[0]
+    del uncompletedWords[0]
+    
     while uncompletedWords[0][2]:
         #Put word, update wordsToUpdate
         wordsToUpdate = []
@@ -180,22 +187,32 @@ def solveGrid(grid):
                 tempY = y-1
                 while tempY >= 0 and grid[x+i][tempY] != '&':
                     if grid[x+i][tempY-1] == '&':
-                        item = next(i for i in uncompletedWords if i[0] is x+i and i[1] is tempY)
-                        wordsToUpdate.append(item)
-                        uncompletedWords.remove(item)
+                        completed = False
+                        try:
+                            item = next(j for j in uncompletedWords if j[0] is x+i and j[1] is tempY)
+                        except:
+                            completed = True
+                        if not completed:
+                            wordsToUpdate.append(item)
+                            uncompletedWords.remove(item)
         else:
             for i in range(len(word)):
                 grid[x][y+i] = word[i]
                 tempX = x-1
                 while tempX >= 0 and grid[tempX][y+i] != '&':
                     if grid[tempX-1][y+i] == '&':
-                        item = next(i for i in uncompletedWords if i[0] is tempX and i[1] is y+i)
-                        wordsToUpdate.append(item)
-                        uncompletedWords.remove(item)
+                        completed = False
+                        try:
+                            item = next(j for j in uncompletedWords if j[0] is tempX and j[1] is y+i)
+                        except:
+                            completed = True
+                        if not completed:
+                            wordsToUpdate.append(item)
+                            uncompletedWords.remove(item)
         
         #Update words that got affected
         updateFine = True
-        for element in blackSquares:
+        for element in wordsToUpdate:
             if element[3] == 1:
                 #check to the right
                 exp = ""
@@ -225,9 +242,6 @@ def solveGrid(grid):
                 if '.' in exp:
                     uncompletedWords.append((element[0]+1, y, matches, 0))
 
-        #Including the orginial
-        saveCur = uncompletedWords[0][2]
-        del uncompletedWords[0][2]
         if updateFine:
             result = fillWord(grid)
             if result is not False:
@@ -240,6 +254,7 @@ def solveGrid(grid):
     return False
 
 prepFail = prepGrid(grid)
+print("Prep is done")
 if prepFail is False:
     print("Bad starting configuration")
     print("")
@@ -251,7 +266,7 @@ else:
     else:
         print("\nCompleted Configuration")
         printGrid(grid)
-        print
+        print()
         #And Write the grid to a new file because why not
         with open('finishedCrossword.txt', 'w') as output:
             output.write(str(rows) + " " + str(cols) + "\n")
