@@ -171,44 +171,49 @@ def solveGrid(grid):
     saveCur = uncompletedWords[0]
     del uncompletedWords[0]
     
-    while uncompletedWords[0][2]:
+    while saveCur[2]:
         #Put word, update wordsToUpdate
         wordsToUpdate = []
-        wordIdx = random.randint(0, len(uncompletedWords[0][2])-1)
-        word = uncompletedWords[0][2][wordIdx]
+        wordIdx = random.randint(0, len(saveCur[2])-1)
+        word = saveCur[2][wordIdx]
         #Put word in grid (0 is down, 1 is right)
-        x = uncompletedWords[0][0]
-        y = uncompletedWords[0][1]
+        x = saveCur[0]
+        y = saveCur[1]
         #Down
-        if (uncompletedWords[0][3] == 0):
-            for i in range(len(word)):
+        if (saveCur[3] == 0):
+            for i in range(0, len(word)-1):
                 grid[x+i][y] = word[i]
                 #Each square will have a word to its left
                 tempY = y-1
                 while tempY >= 0 and grid[x+i][tempY] != '&':
-                    if grid[x+i][tempY-1] == '&':
+                    if grid[x+i][tempY-1] == '&' or tempY == 0:
                         completed = False
                         try:
-                            item = next(j for j in uncompletedWords if j[0] is x+i and j[1] is tempY)
+                            item = next(j for j in uncompletedWords if j[0] is x+i and j[1] is tempY and j[3] is 1)
                         except:
                             completed = True
                         if not completed:
                             wordsToUpdate.append(item)
                             uncompletedWords.remove(item)
+                        break;
+                    tempY-=1
+        #Right
         else:
-            for i in range(len(word)):
+            for i in range(0, len(word)-1):
                 grid[x][y+i] = word[i]
                 tempX = x-1
                 while tempX >= 0 and grid[tempX][y+i] != '&':
-                    if grid[tempX-1][y+i] == '&':
+                    if grid[tempX-1][y+i] == '&' or tempX == 0:
                         completed = False
                         try:
-                            item = next(j for j in uncompletedWords if j[0] is tempX and j[1] is y+i)
+                            item = next(j for j in uncompletedWords if j[0] is tempX and j[1] is y+i and j[3] is 0)
                         except:
                             completed = True
                         if not completed:
                             wordsToUpdate.append(item)
                             uncompletedWords.remove(item)
+                        break;
+                    tempX-=1
         
         #Update words that got affected
         updateFine = True
@@ -217,44 +222,45 @@ def solveGrid(grid):
                 #check to the right
                 exp = ""
                 x = element[0]
-                y = element[1]+1
+                y = element[1]
                 while (y < cols and grid[x][y] != '&'):
                     exp+=grid[x][y]
                     y+=1
                 matches = regex(exp)
                 if (len(matches) == 0 and exp != ''):
+                    uncompletedWords.append(element)
                     updateFine = False
                     break
                 if '.' in exp:
-                    uncompletedWords.append((x, element[1]+1, matches, 1))
+                    uncompletedWords.append((x, element[1], matches, 1))
             else:
                 #check down
                 exp = ""
-                x = element[0]+1
+                x = element[0]
                 y = element[1]
                 while (x < rows and grid[x][y] != '&'):
                     exp+=grid[x][y]
                     x+=1
                 matches = regex(exp)
                 if (len(matches) == 0 and exp != ''):
+                    uncompletedWords.append(element)
                     updateFine = False
                     break
                 if '.' in exp:
-                    uncompletedWords.append((element[0]+1, y, matches, 0))
+                    uncompletedWords.append((element[0], y, matches, 0))
 
         if updateFine:
-            result = fillWord(grid)
+            result = solveGrid(grid)
             if result is not False:
                 return result
 
-        uncompletedWords.insert(0, saveCur)
-        del uncompletedWords[0][2][wordIdx]
+        del saveCur[2][wordIdx]
         
-    
+    uncompletedWords.insert(0, saveCur)
     return False
 
 prepFail = prepGrid(grid)
-print("Prep is done")
+
 if prepFail is False:
     print("Bad starting configuration")
     print("")
