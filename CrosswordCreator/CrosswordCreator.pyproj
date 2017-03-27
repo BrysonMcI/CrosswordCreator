@@ -12,7 +12,7 @@
     <OutputPath>.</OutputPath>
     <Name>CrosswordCreator</Name>
     <RootNamespace>CrosswordCreator</RootNamespace>
-    <InterpreterId>{f0b2a21c-b082-44c3-a89a-79c2284172b3}</InterpreterId>
+    <InterpreterId>{9a7a9026-48c1-4688-9d5d-e5699d47d074}</InterpreterId>
     <InterpreterVersion>3.5</InterpreterVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -27,6 +27,7 @@
     <Compile Include="CrosswordCreator.py" />
   </ItemGroup>
   <ItemGroup>
+    <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\3.5" />
     <InterpreterReference Include="{f0b2a21c-b082-44c3-a89a-79c2284172b3}\3.5" />
   </ItemGroup>
   <PropertyGroup>
