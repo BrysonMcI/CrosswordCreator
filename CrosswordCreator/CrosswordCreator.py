@@ -8,14 +8,21 @@ Description: With the help of pattern matching and a dictionary fill in the rema
 import re
 import random
 import string
+from copy import deepcopy
 
 #Globals
-wordDictionary = "words.txt"
+wordDictionary = "cleanWords.txt"
 initState = "crossword.txt"
 rows = 0
 cols = 0
 blackSquares = []
 uncompletedWords = []
+#Set to true if your word list has punctuation, really really slow.
+puncClean = False
+#Set to print every grid
+printDebug = False
+#Helpful for getting repeat results
+#random.seed(1)
 
 punctuation = set(string.punctuation)
 punctuation.add("'")
@@ -50,12 +57,13 @@ def regex(exp):
         matches = ' '.join(matches)
         matches = re.findall( "\\b" + exp + "\\b", matches, re.IGNORECASE)
         #Clean out any with punctuation
-        if (len(matches) > 0):
-            x = 0
-            while x < len(matches)-1:
-                if any(char in punctuation for char in matches[x]):
-                    del matches[x]
-                    x-=1
+        if puncClean:
+            if (len(matches) > 0):
+                x = 0
+                while x < len(matches)-1:
+                    if any(char in punctuation for char in matches[x]):
+                        del matches[x]
+                        x-=1
         return matches
 
 """
@@ -155,16 +163,25 @@ def prepGrid(grid):
         if '.' in exp:
             uncompletedWords.append((element[0]+1, y, matches, 0))
 
-
 """
 Solve the grid.
 """
-def solveGrid(grid):
+def solveGrid(grid, uncompletedWords):
+    
+    grid = deepcopy(grid)
+    uncompletedWords = deepcopy(uncompletedWords)
     #Check if done
     if isDone(grid):
         return grid
+
+    if printDebug:
+        print("")
+        printGrid(grid)
+        print("")
+
     #Resort uncompleted words
     uncompletedWords.sort(key=lambda tup: len(tup[2]))
+       
     #Check if lowest match size is 0 and there is no hope
     if(len(uncompletedWords[0][2]) == 0):
         return False
@@ -183,12 +200,12 @@ def solveGrid(grid):
         y = saveCur[1]
         #Down
         if (saveCur[3] == 0):
-            for i in range(0, len(word)-1):
+            for i in range(0, len(word)):
                 grid[x+i][y] = word[i]
                 #Each square will have a word to its left
-                tempY = y-1
+                tempY = y
                 while tempY >= 0 and grid[x+i][tempY] != '&':
-                    if grid[x+i][tempY-1] == '&' or tempY == 0:
+                    if tempY == 0 or grid[x+i][tempY-1] == '&':
                         completed = False
                         try:
                             item = next(j for j in uncompletedWords if j[0] is x+i and j[1] is tempY and j[3] is 1)
@@ -201,11 +218,11 @@ def solveGrid(grid):
                     tempY-=1
         #Right
         else:
-            for i in range(0, len(word)-1):
+            for i in range(0, len(word)):
                 grid[x][y+i] = word[i]
-                tempX = x-1
+                tempX = x
                 while tempX >= 0 and grid[tempX][y+i] != '&':
-                    if grid[tempX-1][y+i] == '&' or tempX == 0:
+                    if tempX == 0 or grid[tempX-1][y+i] == '&':
                         completed = False
                         try:
                             item = next(j for j in uncompletedWords if j[0] is tempX and j[1] is y+i and j[3] is 0)
@@ -218,6 +235,9 @@ def solveGrid(grid):
                     tempX-=1
         
         #Update words that got affected
+        #Put back words that got completed by this word
+        readdWords = []
+        
         updateFine = True
         for element in wordsToUpdate:
             if element[3] == 1:
@@ -232,9 +252,10 @@ def solveGrid(grid):
                 if (len(matches) == 0 and exp != ''):
                     uncompletedWords.append(element)
                     updateFine = False
-                    break
-                if '.' in exp:
+                elif '.' in exp:
                     uncompletedWords.append((x, element[1], matches, 1))
+                else:
+                    readdWords.append(element)
             else:
                 #check down
                 exp = ""
@@ -247,18 +268,19 @@ def solveGrid(grid):
                 if (len(matches) == 0 and exp != ''):
                     uncompletedWords.append(element)
                     updateFine = False
-                    break
-                if '.' in exp:
+                elif '.' in exp:
                     uncompletedWords.append((element[0], y, matches, 0))
+                else:
+                    readdWords.append(element)
 
         if updateFine:
-            result = solveGrid(grid)
+            result = solveGrid(grid, uncompletedWords)
             if result is not False:
                 return result
 
+        (uncompletedWords.append(element) for element in readdWords)
         del saveCur[2][wordIdx]
         
-    uncompletedWords.insert(0, saveCur)
     return False
 
 prepFail = prepGrid(grid)
@@ -267,7 +289,7 @@ if prepFail is False:
     print("Bad starting configuration")
     print("")
 else:
-    grid = solveGrid(grid)
+    grid = solveGrid(grid, uncompletedWords)
     if grid is False:
         print("No possible configurations")
         print("")
