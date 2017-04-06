@@ -178,7 +178,7 @@ def solveGrid(grid, uncompletedWords):
         print("")
         printGrid(grid)
         print("")
-
+    
     #Resort uncompleted words
     uncompletedWords.sort(key=lambda tup: len(tup[2]))
        
@@ -289,6 +289,7 @@ if prepFail is False:
     print("Bad starting configuration")
     print("")
 else:
+    print("Begin Solve")
     grid = solveGrid(grid, uncompletedWords)
     if grid is False:
         print("No possible configurations")
